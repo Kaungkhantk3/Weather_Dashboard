@@ -13,14 +13,6 @@ Example:
 
 ---
 
-## 🖼️ Preview
-
-| Search + Dashboard                | 7-Day Forecast                         |
-| --------------------------------- | -------------------------------------- |
-| ![Search UI](assets/preview1.png) | ![Forecast Chart](assets/preview2.png) |
-
----
-
 ## ✨ Features
 
 ✅ Search cities worldwide (powered by Open-Meteo geocoding API)  
