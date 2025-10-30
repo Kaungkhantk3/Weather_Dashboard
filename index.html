@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather Dashboard – HTML</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://api.open-meteo.com">
+  <link rel="preconnect" href="https://geocoding-api.open-meteo.com">
+  <style>
+    .card{background:rgba(15,23,42,.7);border:1px solid #334155;backdrop-filter:blur(8px)}
+    .chip{background:rgba(30,41,59,.7);border:1px solid #334155}
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+  <div class="mx-auto max-w-6xl px-4 py-8">
+    <!-- Header -->
+    <header class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <h1 class="text-3xl md:text-4xl font-semibold tracking-tight flex items-center gap-3">
+        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        Weather Dashboard
+      </h1>
+      <div class="flex flex-col md:flex-row gap-3 md:items-center w-full md:w-auto">
+        <div class="flex items-center rounded-2xl chip focus-within:ring-1 focus-within:ring-sky-500 overflow-hidden w-full md:w-96">
+          <svg class="w-5 h-5 mx-3 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="searchInput" placeholder="Search city (e.g., Chiang Mai)" class="w-full bg-transparent py-3 pr-3 outline-none placeholder:text-slate-400" />
+        </div>
+        <div class="flex gap-2">
+          <button id="unitBtn" class="px-4 py-2 rounded-xl chip hover:bg-slate-700 transition">°C</button>
+          <button id="refreshBtn" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 transition inline-flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v7h-7"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Typeahead -->
+    <ul id="results" class="mt-3 max-w-2xl rounded-2xl overflow-hidden card divide-y divide-slate-800 hidden"></ul>
+
+    <!-- Recents -->
+    <div id="recents" class="mt-5 flex flex-wrap gap-2 items-center hidden">
+      <div class="text-slate-400 flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 7 3.34"/></svg>
+        Recent:
+      </div>
+      <div id="recentChips" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Grid -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Current Card -->
+      <section class="md:col-span-1 rounded-3xl p-6 card shadow-xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-sm uppercase tracking-wider text-slate-400">Current</div>
+            <div id="place" class="text-2xl font-semibold mt-1 flex items-center gap-2">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              —
+            </div>
+          </div>
+          <div id="spinner" class="hidden animate-spin">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          </div>
+        </div>
+        <div id="error" class="mt-4 text-rose-400 text-sm hidden"></div>
+        <div id="current" class="mt-6 space-y-6 hidden">
+          <div class="flex items-baseline gap-3">
+            <div id="temp" class="text-5xl font-bold">—°</div>
+            <div id="feels" class="text-slate-400">feels —°</div>
+          </div>
+          <div id="condition" class="flex items-center gap-2 text-slate-300"></div>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="rounded-2xl p-4 chip">
+              <div class="text-slate-400 text-xs">Humidity</div>
+              <div id="humidity" class="mt-1 flex items-center gap-2 text-lg font-medium">—%</div>
+            </div>
+            <div class="rounded-2xl p-4 chip">
+              <div class="text-slate-400 text-xs">Wind</div>
+              <div id="wind" class="mt-1 flex items-center gap-2 text-lg font-medium">—</div>
+            </div>
+            <div class="rounded-2xl p-4 chip">
+              <div class="text-slate-400 text-xs">Unit</div>
+              <div id="unitLabel" class="mt-1 text-lg font-medium">Metric (°C)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Forecast Panel -->
+      <section class="md:col-span-2 rounded-3xl p-6 card shadow-xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm uppercase tracking-wider text-slate-400">7‑Day Forecast</div>
+            <div class="text-xl font-semibold mt-1">Temperature Trend</div>
+          </div>
+        </div>
+        <div class="mt-6 h-72 w-full">
+          <canvas id="chart" aria-label="7-day temperature chart"></canvas>
+        </div>
+        <div id="dailyCards" class="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3"></div>
+      </section>
+    </div>
+
+    <footer class="mt-10 text-center text-slate-500 text-xs">
+      Built with Open‑Meteo API • 
+    </footer>
+  </div>
+
+<script>
+// --- Config & Helpers --------------------------------------------------------
+const STORAGE_RECENTS = 'weather.recents.v1';
+const STORAGE_UNIT = 'weather.unit.v1';
+let UNIT = localStorage.getItem(STORAGE_UNIT) || 'celsius'; // 'celsius' | 'fahrenheit'
+
+const CODE = {
+  0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+  45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+  61: 'Slight rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Slight snow', 73: 'Snow', 75: 'Heavy snow',
+  80: 'Rain showers', 81: 'Heavy showers', 82: 'Violent showers', 95: 'Thunderstorm', 96: 'Thunderstorm + hail', 99: 'Severe thunderstorm'
+};
+function iconFor(code){
+  const d = document.createElement('span');
+  d.className = 'inline-flex items-center';
+  d.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg>';
+  if([61,63,65,80,81,82,95,96,99,51,53,55].includes(code)){
+    d.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.5A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15"/><path d="M16 13v6M8 13v6M12 15v6"/></svg>'
+  }
+  return d;
+}
+function debounce(fn, ms){let t;return (...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)};}
+function show(el){el.classList.remove('hidden')}
+function hide(el){el.classList.add('hidden')}
+
+// --- DOM --------------------------------------------------------------------
+const searchInput = document.getElementById('searchInput');
+const results = document.getElementById('results');
+const recentsWrap = document.getElementById('recents');
+const recentChips = document.getElementById('recentChips');
+const unitBtn = document.getElementById('unitBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+
+const placeEl = document.getElementById('place');
+const spinner = document.getElementById('spinner');
+const errorEl = document.getElementById('error');
+const currentBox = document.getElementById('current');
+const tempEl = document.getElementById('temp');
+const feelsEl = document.getElementById('feels');
+const condEl = document.getElementById('condition');
+const humEl = document.getElementById('humidity');
+const windEl = document.getElementById('wind');
+const unitLabel = document.getElementById('unitLabel');
+const dailyCards = document.getElementById('dailyCards');
+
+let chart;
+let SELECTED = null;
+
+// --- Recents -----------------------------------------------------------------
+function loadRecents(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_RECENTS)||'[]') }catch{return []}
+}
+function saveRecents(list){ localStorage.setItem(STORAGE_RECENTS, JSON.stringify(list.slice(0,6))) }
+function renderRecents(){
+  const list = loadRecents();
+  recentChips.innerHTML = '';
+  if(list.length===0){ hide(recentsWrap); return }
+  list.forEach(({key,city})=>{
+    const b=document.createElement('button');
+    b.className='px-3 py-1.5 rounded-full chip hover:bg-slate-700 text-sm';
+    b.textContent=key; b.onclick=()=>pickCity(city);
+    recentChips.appendChild(b);
+  })
+  show(recentsWrap);
+}
+function addRecent(city){
+  const key = `${city.name}, ${city.country}`;
+  const list = loadRecents().filter(r=>r.key!==key);
+  list.unshift({key,city});
+  saveRecents(list);
+  renderRecents();
+}
+
+// --- Search & Geocoding ------------------------------------------------------
+async function searchPlaces(q){
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`;
+  const data = await fetch(url).then(r=>r.json());
+  return data.results||[];
+}
+const handleType = debounce(async (val)=>{
+  if(!val || val.trim().length<2){ results.innerHTML=''; hide(results); return }
+  try{
+    const items = await searchPlaces(val.trim());
+    results.innerHTML = items.map(r=>`<li>
+      <button class="w-full text-left px-4 py-3 hover:bg-slate-800/70 flex items-center gap-3" data-payload='${JSON.stringify(r)}'>
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="font-medium">${r.name}</span>
+        <span class="text-slate-400">${[r.admin1,r.country].filter(Boolean).join(', ')}</span>
+      </button>
+    </li>`).join('');
+    show(results);
+    Array.from(results.querySelectorAll('button')).forEach(btn=>{
+      btn.onclick=()=>{ const r=JSON.parse(btn.dataset.payload); pickCity(r) }
+    })
+  }catch{ hide(results) }
+}, 300);
+
+searchInput.addEventListener('input', e=> handleType(e.target.value));
+
+// --- Weather Fetch -----------------------------------------------------------
+async function fetchWeather(city){
+  const base = new URL('https://api.open-meteo.com/v1/forecast');
+  base.searchParams.set('latitude', city.latitude);
+  base.searchParams.set('longitude', city.longitude);
+  base.searchParams.set('timezone', 'auto');
+  base.searchParams.set('temperature_unit', UNIT==='celsius'?'celsius':'fahrenheit');
+  base.searchParams.set('windspeed_unit', UNIT==='celsius'?'kmh':'mph');
+  base.searchParams.set('current', 'temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code,is_day');
+  base.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min');
+  const data = await fetch(base.toString()).then(r=>r.json());
+  return data;
+}
+
+function renderCurrent(city, data){
+  const cur = data.current||data.current_weather||{};
+  placeEl.lastChild && placeEl.removeChild(placeEl.lastChild);
+  placeEl.appendChild(document.createTextNode(`${city.name}, ${city.country}`));
+  tempEl.textContent = `${Math.round(cur.temperature_2m ?? cur.temperature ?? 0)}°`;
+  feelsEl.textContent = `feels ${Math.round(cur.apparent_temperature ?? cur.temperature_2m ?? 0)}°`;
+  condEl.innerHTML='';
+  const icon = iconFor(cur.weather_code ?? cur.weathercode ?? 0);
+  condEl.appendChild(icon);
+  const span = document.createElement('span');
+  span.textContent = CODE[cur.weather_code ?? cur.weathercode] || '—';
+  condEl.appendChild(span);
+  humEl.textContent = `${cur.relative_humidity_2m ?? 0}%`;
+  windEl.textContent = `${Math.round(cur.wind_speed_10m ?? cur.windspeed ?? 0)} ${UNIT==='celsius'?'km/h':'mph'}`;
+  unitLabel.textContent = UNIT==='celsius' ? 'Metric (°C)' : 'Imperial (°F)';
+  show(currentBox);
+}
+
+function renderChartAndDays(data){
+  const times = data.daily.time || [];
+  const tmin = data.daily.temperature_2m_min || [];
+  const tmax = data.daily.temperature_2m_max || [];
+  const labels = times.map(t=> new Date(t).toLocaleDateString(undefined,{month:'short', day:'numeric'}));
+  const ctx = document.getElementById('chart');
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label:'Min', data: tmin, tension: .3, borderWidth:3, pointRadius:0},
+        {label:'Max', data: tmax, tension: .3, borderWidth:3, pointRadius:0}
+      ]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{ ticks:{ color:'#94a3b8' }, grid:{ color:'rgba(51,65,85,.3)' } },
+        y:{ ticks:{ color:'#94a3b8' }, grid:{ color:'rgba(51,65,85,.3)' } }
+      },
+      plugins:{ legend:{ labels:{ color:'#e2e8f0' } }, tooltip:{ backgroundColor:'#0f172a', borderColor:'#334155', borderWidth:1 } }
+    }
+  });
+
+  dailyCards.innerHTML = '';
+  times.forEach((t,i)=>{
+    const card = document.createElement('div');
+    card.className = 'rounded-2xl chip p-3 text-center';
+    const dt = new Date(t);
+    const weekday = dt.toLocaleDateString(undefined,{weekday:'short'});
+    const dateLabel = dt.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+    const wcode = (data.daily.weather_code||[])[i];
+    const temp = document.createElement('div');
+    temp.className = 'mt-2 text-lg font-medium';
+    temp.textContent = `${Math.round(tmin[i])}° / ${Math.round(tmax[i])}°`;
+
+    const row = document.createElement('div');
+    row.className = 'mt-2 flex items-center justify-center gap-2 text-sm';
+    row.appendChild(iconFor(wcode));
+    const s=document.createElement('span'); s.textContent=CODE[wcode]||''; row.appendChild(s);
+
+    card.innerHTML = `<div class="text-xs text-slate-400">${weekday}</div><div class="mt-1 font-semibold">${dateLabel}</div>`;
+    card.appendChild(row);
+    card.appendChild(temp);
+    dailyCards.appendChild(card);
+  });
+}
+
+async function loadCity(city){
+  errorEl.textContent=''; hide(errorEl); show(spinner);
+  try{
+    const data = await fetchWeather(city);
+    renderCurrent(city, data);
+    renderChartAndDays(data);
+  }catch(e){
+    errorEl.textContent='Could not load weather. Please try again.'; show(errorEl);
+  }finally{ spinner.classList.add('hidden') }
+}
+
+function pickCity(r){
+  SELECTED = { name:r.name, country:r.country, latitude:r.latitude, longitude:r.longitude, timezone:r.timezone };
+  searchInput.value = `${SELECTED.name}, ${SELECTED.country}`;
+  results.innerHTML=''; hide(results);
+  addRecent(SELECTED);
+  loadCity(SELECTED);
+}
+
+// --- Unit toggle & refresh ---------------------------------------------------
+unitBtn.onclick = ()=>{
+  UNIT = UNIT==='celsius' ? 'fahrenheit' : 'celsius';
+  localStorage.setItem(STORAGE_UNIT, UNIT);
+  unitBtn.textContent = UNIT==='celsius' ? '°C' : '°F';
+  if(SELECTED) loadCity(SELECTED);
+}
+refreshBtn.onclick = ()=>{ if(SELECTED) loadCity(SELECTED) };
+
+// --- Try geolocation on first load ------------------------------------------
+(async ()=>{
+  renderRecents();
+  unitBtn.textContent = UNIT==='celsius' ? '°C' : '°F';
+  try{
+    const pos = await new Promise((res,rej)=>{
+      if(!navigator.geolocation) return rej(new Error('no geo'));
+      navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true, timeout:8000});
+    });
+    const {latitude, longitude} = pos.coords;
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=en&format=json`).then(r=>r.json());
+    const place = geo.results && geo.results[0];
+    if(place){ pickCity(place) }
+  }catch{ /* ignore */ }
+})();
+</script>
+</body>
+</html>
