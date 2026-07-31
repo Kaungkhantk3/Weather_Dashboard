@@ -7,8 +7,6 @@ It allows users to search cities, view real-time weather conditions, and see a 7
 
 ## 🚀 Live Demo
 
-_(Add your GitHub Pages or Vercel link here after deployment)_  
-Example:  
 👉 [Live Demo](https://Kaungkhantk3.github.io/Weather_Dashboard/)
 
 ---
