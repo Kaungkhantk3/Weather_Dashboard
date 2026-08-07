@@ -2,6 +2,7 @@
 
 A **modern, single-page Weather Dashboard** built using **HTML, Tailwind CSS, and Chart.js** — powered by the free **[Open-Meteo API](https://open-meteo.com/)**.  
 It allows users to search cities, view real-time weather conditions, and see a 7-day temperature forecast — all in one clean, responsive design.
+<img width="1436" height="682" alt="image" src="https://github.com/user-attachments/assets/24438613-f016-4b79-a1d6-57b7c6d01687" />
 
 ---
 
